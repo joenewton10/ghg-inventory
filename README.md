@@ -1,5 +1,9 @@
 # GHG inventory, Scope 1 and 2: precision cutting site
 
+[![Open the live app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ghg-inventory-io.streamlit.app/)
+
+**Live demo: [ghg-inventory-io.streamlit.app](https://ghg-inventory-io.streamlit.app/)**. It runs on representative data. You can edit anything and download the results, and nothing is saved. If it has been idle, it takes about a minute to wake up.
+
 A Python tool that builds a greenhouse gas inventory for a contract precision cutter, following the GHG Protocol Corporate Standard. It reads activity data from an Excel workbook and emission factors from versioned, cited factor files. It produces a line-item CSV, an Excel workpaper for an auditor, tables ready for Power BI, and a PDF report someone can actually read.
 
 The operation it is modelled on is HTWest, a contract cutter of filter media in Bonn.

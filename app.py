@@ -58,6 +58,7 @@ st.markdown("""
   [data-testid="stMetricValue"], [data-testid="stDataFrame"], table { font-variant-numeric: tabular-nums; }
   [data-testid="stMetricValue"] { font-size: 1.65rem; font-weight: 600; }
   [data-testid="stMetricLabel"] p { color: #52606B; font-size: 0.86rem; }
+  .st-key-metric_row > div { flex: 1 1 190px !important; min-width: 190px; }
   h1 { font-size: 1.9rem !important; letter-spacing: -0.01em; }
   h2 { font-size: 1.3rem !important; margin-top: 0.6rem; }
   h3 { font-size: 1.05rem !important; }
@@ -376,7 +377,8 @@ def page_overview():
     st.altair_chart(comparison_chart(result), width="stretch", theme=None)
 
     u = result.uncertainty
-    c1, c2, c3, c4 = st.columns(4)
+    # A wrapping row: four tiles across on a wide screen, two by two or stacked when space is tight.
+    c1 = c2 = c3 = c4 = st.container(horizontal=True, gap="small", key="metric_row")
     c1.metric("Scope 1", f"{t(tot.scope1_kg)} t", border=True,
               help=f"95% range {u['scope1'].low_kg / 1000:,.1f} to {u['scope1'].high_kg / 1000:,.1f} t")
     c2.metric("Scope 2, location-based", f"{t(tot.scope2_location_kg)} t", border=True,
