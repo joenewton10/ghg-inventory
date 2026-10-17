@@ -12,6 +12,10 @@ I took the same approach in the EUDR screening project: build the method properl
 
 ## Results on the representative data (2025)
 
+The full report is in [docs/sample_report.pdf](docs/sample_report.pdf). Its first page:
+
+<img src="docs/report_page1.png" alt="First page of the sample GHG inventory report" width="560">
+
 | | t CO2e |
 |---|---:|
 | Scope 1 (gas heating, vans, forklift, refrigerant leaks) | 40.5 |
