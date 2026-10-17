@@ -126,9 +126,15 @@ It opens in the browser at `http://localhost:8501` and does everything the comma
 - **Export:** builds the PDF, the Excel workpaper, the CSV and the Power BI tables, and offers each as a download. It asks you to save first, so the manifest hashes match the files the numbers came from.
 - **Factors and sources:** the emission factors with their citations, the source register and the refrigerant GWPs. These are read-only on purpose. A factor typed into a form has no source, so new factors go in as new cited files.
 
+On a public host the app runs in demo mode. Each visitor's edits stay in their own browser session. The save buttons become downloads (the edited workbook and `config.yaml`), and Export builds the files from the session without writing to disk. Demo mode switches on by itself on Streamlit Community Cloud. Set `GHG_APP_MODE=demo` or `GHG_APP_MODE=local` to force either mode.
+
 The app holds no calculation logic of its own. It calls the same functions as the command line, so both produce identical numbers.
 
-Run it on your own machine. If you put it on a public host, use representative data only.
+Run it on your own machine for real data. The public demo uses representative data only.
+
+#### Deploying the demo
+
+The app deploys to Streamlit Community Cloud straight from this repository. Sign in at share.streamlit.io with GitHub, choose Create app, and pick this repo, branch `main` and main file `app.py`. Under Advanced settings, choose Python 3.12. Dependencies come from `requirements.txt` and the theme from `.streamlit/config.toml`.
 
 ### Tests
 

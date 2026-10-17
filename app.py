@@ -7,6 +7,7 @@ config.yaml), runs the same engine, and writes the same output files.
 import copy
 import io
 import json
+import os
 import re
 import tempfile
 import zipfile
@@ -15,6 +16,7 @@ from pathlib import Path
 import altair as alt
 import pandas as pd
 import streamlit as st
+import yaml
 
 from ghg_inventory.config import ConfigError, config_from_dict, load_config, save_config
 from ghg_inventory.excel_io import METRICS, make_template
@@ -29,6 +31,19 @@ from ghg_inventory.ui_state import (
 
 ROOT = Path(__file__).resolve().parent
 CONFIG_PATH = ROOT / "config.yaml"
+
+
+def _demo_mode() -> bool:
+    """A public deployment is shared by every visitor, so it must not write to disk. Demo mode keeps all
+    edits in the visitor's own session and turns the save buttons into downloads. It is on automatically
+    on Streamlit Community Cloud (apps run from /mount/src) and can be forced with GHG_APP_MODE=demo|local."""
+    mode = os.environ.get("GHG_APP_MODE", "").strip().lower()
+    if mode in ("demo", "local"):
+        return mode == "demo"
+    return ROOT.as_posix().startswith("/mount/src/")
+
+
+DEMO = _demo_mode()
 
 BLUE, ORANGE, AQUA, YELLOW, MAGENTA = "#2a78d6", "#eb6834", "#1baf7a", "#eda100", "#e87ba4"
 SERIES = [BLUE, ORANGE, AQUA, YELLOW, MAGENTA, "#008300", "#6250d6", "#e34948"]
@@ -193,6 +208,18 @@ def source_colours(config) -> dict[str, str]:
     colours = {s.id: SERIES[i % len(SERIES)] for i, s in enumerate(ordered)}
     colours["refrigerants"] = MAGENTA
     return colours
+
+
+def workbook_bytes(config, factors, data) -> bytes:
+    """The data as an input workbook (template layout), for download."""
+    with tempfile.TemporaryDirectory() as tmp:
+        return make_template(config, factors, Path(tmp) / "activity_input.xlsx", data=data).read_bytes()
+
+
+def config_yaml(config) -> str:
+    header = ("# GHG inventory configuration, downloaded from the app.\n"
+              "# Drop it next to app.py (replacing config.yaml) to use these settings locally.\n")
+    return header + yaml.safe_dump(config.model_dump(mode="json"), sort_keys=False, allow_unicode=True, width=110)
 
 
 def t(kg: float) -> str:
@@ -537,8 +564,16 @@ def page_data():
         ss.grid_version += 1
         st.rerun()
     result, problems, settings_error = current()
-    can_save = data_dirty() and not problems and not settings_error
-    if save_col.button("Save to workbook", type="primary", icon=":material/save:", width="stretch",
+    if DEMO:
+        if result is not None:
+            save_col.download_button("Download workbook", workbook_bytes(result.config, factors, result.data),
+                                     file_name="activity_input.xlsx", type="primary", icon=":material/download:",
+                                     width="stretch", help="Your edited data, in the input template layout")
+        else:
+            save_col.button("Download workbook", disabled=True, width="stretch", icon=":material/download:",
+                            help="Fix the problems listed under Checks first")
+    can_save = not DEMO and data_dirty() and not problems and not settings_error
+    if not DEMO and save_col.button("Save to workbook", type="primary", icon=":material/save:", width="stretch",
                        disabled=not can_save,
                        help="Writes the grids to " + ss.settings["input"] + " (the old file is kept as a backup)"):
         data, _ = data_from_frames(ss.live, result.config)
@@ -683,7 +718,16 @@ def page_settings():
 def _save_settings_bar(where: str):
     dirty = settings_dirty()
     a, b, _ = st.columns([1.2, 1, 3])
-    if a.button("Save settings", type="primary", icon=":material/save:", disabled=not dirty,
+    if DEMO:
+        _, factors, _ = load_project()
+        try:
+            text = config_yaml(config_from_dict(ss.settings, factors))
+        except ConfigError:
+            text = None
+        a.download_button("Download config.yaml", text or "", file_name="config.yaml", mime="text/yaml",
+                          type="primary", icon=":material/download:", width="stretch", disabled=text is None,
+                          key=f"dl_settings_{where}")
+    elif a.button("Save settings", type="primary", icon=":material/save:", disabled=not dirty,
                 width="stretch", key=f"save_settings_{where}"):
         _, factors, _ = load_project()
         try:
@@ -811,12 +855,14 @@ def page_export():
     st.markdown('<p class="muted">Builds the PDF report, the Excel workpaper, the line-by-line CSV and the '
                 "Power BI tables from the saved inputs. The run manifest records a hash of each input file, "
                 "so every number can be traced.</p>", unsafe_allow_html=True)
+    if DEMO:
+        st.caption("Demo: the files are built from the data and settings in this session.")
     result, problems, settings_error = current()
     if result is None:
         blocked(problems, settings_error)
         return
     unsaved = [name for name, dirty in (("activity data", data_dirty()), ("settings", settings_dirty())) if dirty]
-    if unsaved:
+    if unsaved and not DEMO:
         st.warning(f"You have unsaved {' and '.join(unsaved)}. Save first, so the files and the manifest "
                    "describe the same inputs.", icon=":material/edit_note:")
         if st.button("Save everything", type="primary", icon=":material/save:"):
@@ -833,13 +879,22 @@ def page_export():
             st.rerun()
         return
 
-    also_save = st.checkbox("Also write the files to the output folder", value=True)
+    also_save = False if DEMO else st.checkbox("Also write the files to the output folder", value=True)
     if st.button("Build report and files", type="primary", icon=":material/description:"):
         with st.spinner("Building the report"):
             config, factors, base_dir = load_project()
             with tempfile.TemporaryDirectory() as tmp:
-                paths = write_all_outputs(result, Path(tmp), CONFIG_PATH, _input_path(config), base_dir)
-                files = {p.relative_to(tmp).as_posix(): p.read_bytes() for p in paths}
+                tmp = Path(tmp)
+                if DEMO:
+                    # Build from this session's inputs, written to temp files so the manifest hashes them.
+                    config_path, input_path = tmp / "config.yaml", tmp / "activity_input.xlsx"
+                    config_path.write_text(config_yaml(result.config), encoding="utf-8")
+                    input_path.write_bytes(workbook_bytes(result.config, factors, result.data))
+                else:
+                    config_path, input_path = CONFIG_PATH, _input_path(config)
+                out = tmp / "out"
+                paths = write_all_outputs(result, out, config_path, input_path, base_dir)
+                files = {p.relative_to(out).as_posix(): p.read_bytes() for p in paths}
             if also_save:
                 write_all_outputs(result, base_dir / config.output_dir, CONFIG_PATH, _input_path(config), base_dir)
             ss.exports = files
@@ -980,6 +1035,11 @@ BEFORE_YOU_START = [
 
 def page_guide():
     st.title("How to use this tool")
+    if DEMO:
+        st.info("This is the public demo, running on representative data. You can change anything, but your "
+                "changes stay in this browser tab and are gone when you close it. Where the steps say Save, the "
+                "demo offers a download instead, so you can keep your workbook and settings.",
+                icon=":material/visibility:")
     st.markdown('<p class="lede">This guide walks you through building a Scope 1 and 2 inventory, from '
                 "collecting your energy bills to exporting the finished report. Follow the steps in order the "
                 "first time. In later years you mainly add the new year's bills and run it again.</p>",
@@ -1055,7 +1115,9 @@ with sidebar_status.container():
     status = ss.settings["reporting"]["data_status"]
     pills = (f'<span class="pill pill-rep">Representative data</span>' if status == "representative"
              else f'<span class="pill pill-act">Actual data</span>')
-    if data_dirty() or settings_dirty():
+    if DEMO:
+        pills += ' <span class="pill pill-dirty">Demo, nothing is saved</span>'
+    elif data_dirty() or settings_dirty():
         pills += ' <span class="pill pill-dirty">Unsaved changes</span>'
     st.markdown(f'<div class="side-org">{ss.settings["organisation"]["name"]}</div>'
                 f'<div class="side-meta">{ss.settings["organisation"]["site"]}, '
