@@ -230,3 +230,39 @@ def write_manifest(result: InventoryResult, config_path: Path, input_path: Path,
     }
     path.write_text(json.dumps(manifest, indent=2), encoding="utf-8")
     return path
+
+
+# ---------------------------------------------------------------- everything at once
+
+
+def render_charts(result: InventoryResult) -> dict[str, bytes]:
+    from ghg_inventory.chart import (
+        abatement_chart, monthly_chart, scope_totals_chart, source_chart, source_colours,
+    )
+
+    # Scope 2 first so electricity keeps slot 1 (blue) in every chart, matching the scope chart.
+    colours = source_colours([s.id for s in sorted(result.config.sources, key=lambda s: -s.scope)])
+    return {
+        "scopes": scope_totals_chart(result.totals),
+        "sources": source_chart(result.totals, colours),
+        "monthly": monthly_chart(result.totals, colours),
+        "abatement": abatement_chart(result.abatement),
+    }
+
+
+def write_all_outputs(result: InventoryResult, out: Path, config_path: Path, input_path: Path,
+                      base_dir: Path) -> list[Path]:
+    """Write every output file; the CLI and the UI both call this. Returns paths, manifest last."""
+    from ghg_inventory.report import build_report_context, render_pdf
+
+    out.mkdir(parents=True, exist_ok=True)
+    written = [
+        write_lines_csv(result, out / "inventory_lines.csv"),
+        write_workbook(result, out / "ghg_inventory.xlsx"),
+        *write_tidy_tables(result, out / "tables"),
+    ]
+    report_path = out / "ghg_inventory_report.pdf"
+    render_pdf(build_report_context(result), render_charts(result), str(report_path))
+    written.append(report_path)
+    written.append(write_manifest(result, config_path, input_path, base_dir, written, out / "run_manifest.json"))
+    return written

@@ -81,3 +81,13 @@ def test_intensity_and_scope3(base):
     assert "floor_area_m2" not in by_metric
     screen = scope3_screening(config, factors, totals, d.metrics)[0]
     assert screen.estimate_t == pytest.approx(134.50779)
+
+
+def test_green_tariff_premium_scales_with_coverage(base):
+    config, factors, d = base
+    half = config.model_copy(update={"abatement": [
+        o.model_copy(update={"eac_covered_share": 0.5}) if o.type == "green_tariff" else o for o in config.abatement]})
+    r = _by_type(evaluate_abatement(half, factors, d))["green_tariff"]
+    assert r.saving_market_t == pytest.approx(70.147 / 2)
+    assert r.annual_cost_eur == pytest.approx(500)
+    assert r.eur_per_t == pytest.approx(1000 / 70.147)

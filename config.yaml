@@ -31,7 +31,7 @@ sources:
     factor: defra_2025.natural_gas_gcv
     unit_conversions:
       # Only needed if the gas bill gives m3: kWh = m3 x Zustandszahl x Brennwert (both printed on the bill).
-      m3: {multiplier: 10.66, note: "Zustandszahl 0.9520 x Brennwert 11.2 kWh/m3, typical values, replace with bill figures"}
+      m3: {multiplier: 10.6624, note: "Zustandszahl 0.952 x Brennwert 11.2 kWh/m3, typical values, replace with bill figures"}
   - id: vehicle_diesel
     name: Company vans, diesel
     role: vehicles

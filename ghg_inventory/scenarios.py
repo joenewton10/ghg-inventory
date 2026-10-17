@@ -98,7 +98,8 @@ def _option_effect(option: AbatementOption, config: Config, annual: dict[str, fl
         elec = _role(config, "electricity", option)
         current = config.source(elec).market
         override = current.model_copy(update={"eac_covered_share": p("eac_covered_share")})
-        premium = annual[elec] * p("premium_eur_per_kwh")
+        # The premium is paid only on the kWh actually covered by guarantees of origin.
+        premium = annual[elec] * p("eac_covered_share") * p("premium_eur_per_kwh")
         return {}, override, premium, "Changes the market-based figure only. The grid emits the same."
     raise ValueError(f"unhandled abatement type {t!r}")
 

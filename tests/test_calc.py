@@ -41,7 +41,7 @@ def test_ar6_changes_only_non_co2_gases(loaded):
 def test_gas_in_m3_uses_bill_conversion(loaded):
     config, factors, _ = loaded
     line = calculate_lines(_ar5(config), factors, data(activity("heating_gas", 100, "m3")))[0]
-    assert line.quantity_in_factor_unit == pytest.approx(1066)
+    assert line.quantity_in_factor_unit == pytest.approx(1066.24)
 
 
 def test_unit_mismatch_names_the_row(loaded):

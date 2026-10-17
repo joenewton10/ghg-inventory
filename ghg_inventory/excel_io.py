@@ -4,6 +4,7 @@ A folder holding activity.csv, refrigerants.csv and metrics.csv (same columns) i
 """
 
 import csv
+import math
 from pathlib import Path
 
 from openpyxl import Workbook, load_workbook
@@ -170,17 +171,29 @@ def make_template(config: Config, factors: dict[str, Factor], path: str | Path,
 
 
 def _blank(value) -> bool:
-    return value is None or (isinstance(value, str) and not value.strip())
+    return _clean(value) is None
 
 
 def _clean(value):
+    """Strip strings; treat empty strings and NaN (from pandas) as missing."""
     if isinstance(value, str):
         value = value.strip()
         return value or None
+    if isinstance(value, float) and math.isnan(value):
+        return None
     return value
 
 
-def _parse(sheet: str, columns: tuple[str, ...], rows, model, problems: list[str]) -> list:
+def _where(sheet: str, row_number: int, columns: tuple[str, ...], field: str | None, cell_refs: bool) -> str:
+    """'Activity!C7 (quantity)' for workbooks, 'Activity row 7, quantity' for the UI grids."""
+    if cell_refs:
+        if field in columns:
+            return f"{sheet}!{get_column_letter(columns.index(field) + 1)}{row_number} ({field})"
+        return f"{sheet}!{row_number}"
+    return f"{sheet} row {row_number}" + (f", {field}" if field else "")
+
+
+def _parse(sheet: str, columns: tuple[str, ...], rows, model, problems: list[str], cell_refs: bool = True) -> list:
     records = []
     for row_number, values in rows:
         values = list(values)[: len(columns)]
@@ -194,19 +207,17 @@ def _parse(sheet: str, columns: tuple[str, ...], rows, model, problems: list[str
             if text_field in raw:
                 raw[text_field] = str(raw[text_field])
         try:
-            records.append(model(row_ref=f"{sheet}!{row_number}", **raw))
+            row_ref = f"{sheet}!{row_number}" if cell_refs else f"{sheet} row {row_number}"
+            records.append(model(row_ref=row_ref, **raw))
         except ValidationError as exc:
             for err in exc.errors():
                 field = err["loc"][0] if err["loc"] else None
-                if field in columns:
-                    where = f"{sheet}!{get_column_letter(columns.index(field) + 1)}{row_number}"
-                    problems.append(f"{where} ({field}): {err['msg']}")
-                else:
-                    problems.append(f"{sheet}!{row_number}: {err['msg']}")
+                where = _where(sheet, row_number, columns, field if field in columns else None, cell_refs)
+                problems.append(f"{where}: {err['msg']}")
     return records
 
 
-def _parse_metrics(sheet: str, rows, problems: list[str]) -> dict[str, float]:
+def _parse_metrics(sheet: str, rows, problems: list[str], cell_refs: bool = True) -> dict[str, float]:
     known = {key for key, _, _ in METRICS}
     metrics = {}
     for row_number, values in rows:
@@ -215,28 +226,46 @@ def _parse_metrics(sheet: str, rows, problems: list[str]) -> dict[str, float]:
         if key is None or value is None:
             continue
         if key not in known:
-            problems.append(f"{sheet}!A{row_number}: unknown metric {key!r}")
+            problems.append(f"{_where(sheet, row_number, METRIC_COLUMNS, 'metric', cell_refs)}: unknown metric {key!r}")
             continue
         try:
             metrics[key] = float(value)
         except (TypeError, ValueError):
-            problems.append(f"{sheet}!B{row_number}: {key} must be a number, got {value!r}")
+            problems.append(f"{_where(sheet, row_number, METRIC_COLUMNS, 'value', cell_refs)}: "
+                            f"{key} must be a number, got {value!r}")
     return metrics
 
 
-def _check_sources(config: Config, records: list[ActivityRecord], problems: list[str]):
+def _check_sources(config: Config, records: list[ActivityRecord], problems: list[str], cell_refs: bool = True):
     ids = {s.id for s in config.sources}
     year = str(config.reporting.year)
     for r in records:
+        def where(field):
+            return f"{r.row_ref} ({field})" if cell_refs else f"{r.row_ref}, {field}"
         if r.source_id not in ids:
-            problems.append(f"{r.row_ref} (source_id): {r.source_id!r} is not in the source register in config.yaml")
+            problems.append(f"{where('source_id')}: {r.source_id!r} is not in the source register in config.yaml")
         if not r.month.startswith(year):
-            problems.append(f"{r.row_ref} (month): {r.month} is outside the reporting year {year}")
+            problems.append(f"{where('month')}: {r.month} is outside the reporting year {year}")
+
+
+def parse_tables(config: Config, activity_rows, refrigerant_rows, metric_rows,
+                 sheets: tuple[str, str, str] = ("Activity", "Refrigerants", "Metrics"),
+                 cell_refs: bool = True) -> tuple[ActivityData | None, list[str]]:
+    """Validate rows of (row_number, values). Returns (data, problems); data is None if there are problems."""
+    problems: list[str] = []
+    activities = _parse(sheets[0], ACTIVITY_COLUMNS, activity_rows, ActivityRecord, problems, cell_refs)
+    refrigerants = _parse(sheets[1], REFRIGERANT_COLUMNS, refrigerant_rows, RefrigerantRecord, problems, cell_refs)
+    metrics = _parse_metrics(sheets[2], metric_rows, problems, cell_refs)
+    _check_sources(config, activities, problems, cell_refs)
+    if not activities and not problems:
+        problems.append("There are no activity rows yet.")
+    if problems:
+        return None, problems
+    return ActivityData(activities=activities, refrigerants=refrigerants, metrics=metrics), []
 
 
 def read_input(path: str | Path, config: Config) -> ActivityData:
     path = Path(path)
-    problems: list[str] = []
     if path.is_dir():
         def rows(name):
             file = path / name
@@ -259,12 +288,8 @@ def read_input(path: str | Path, config: Config) -> ActivityData:
         activity_rows, refrigerant_rows, metric_rows = rows("Activity"), rows("Refrigerants"), rows("Metrics")
         sheets = ("Activity", "Refrigerants", "Metrics")
 
-    activities = _parse(sheets[0], ACTIVITY_COLUMNS, activity_rows, ActivityRecord, problems)
-    refrigerants = _parse(sheets[1], REFRIGERANT_COLUMNS, refrigerant_rows, RefrigerantRecord, problems)
-    metrics = _parse_metrics(sheets[2], metric_rows, problems)
-    _check_sources(config, activities, problems)
-    if not activities and not problems:
-        problems.append(f"{path.name}: no activity rows found")
+    data, problems = parse_tables(config, activity_rows, refrigerant_rows, metric_rows, sheets)
     if problems:
-        raise InputError(problems)
-    return ActivityData(activities=activities, refrigerants=refrigerants, metrics=metrics)
+        raise InputError([p.replace("There are no activity rows yet.", f"{path.name}: no activity rows found")
+                          for p in problems])
+    return data

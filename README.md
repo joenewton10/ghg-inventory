@@ -105,13 +105,42 @@ Errors point at cells, for example `Activity!C7 (quantity): Input should be grea
 
 A folder containing `activity.csv`, `refrigerants.csv` and `metrics.csv` works as input too.
 
+### The app
+
+```bash
+pip install -e ".[ui]"
+python -m streamlit run app.py
+```
+
+It opens in the browser at `http://localhost:8501` and does everything the command line does, on the same files.
+
+- **How to use:** a step-by-step guide, from gathering the bills to exporting the report, with a link to the right page at each step.
+- **Overview:** the location- and market-based totals side by side, then breakdowns by source and month, energy and intensity, uncertainty ranges, where each figure goes in VSME, ESRS and ISO 14064, and every calculated line with a filter.
+- **Activity data:** the input workbook as editable grids. You can type into cells, add rows, paste from Excel, or upload a filled-in workbook. Dropdowns cover sources, months, units and data quality. Every edit is checked straight away. Errors name the row, and warnings catch a month far above the rest (usually a typo) or the same bill entered twice. Save to workbook writes `data/activity_input.xlsx` and keeps the old file as a backup.
+- **Settings:** organisation, reporting year, data status, GWP set, the electricity contract (guarantee-of-origin share, residual mix or the supplier's label factor), the gas m³ conversion, prices and the CO2 price. Save settings writes `config.yaml`, keeps its comments, and backs up the previous version.
+- **Scenarios:** the abatement options with their assumptions as sliders. The cost-per-tonne chart and the ranking update as you move them.
+- **Export:** builds the PDF, the Excel workpaper, the CSV and the Power BI tables, and offers each as a download. It asks you to save first, so the manifest hashes match the files the numbers came from.
+- **Factors and sources:** the emission factors with their citations, the source register and the refrigerant GWPs. These are read-only on purpose. A factor typed into a form has no source, so new factors go in as new cited files.
+
+The app holds no calculation logic of its own. It calls the same functions as the command line, so both produce identical numbers.
+
+Run it on your own machine. If you put it on a public host, use representative data only.
+
 ### Tests
 
 ```bash
 python -m pytest
 ```
 
-52 tests cover the arithmetic with hand-checked values, reconciliation to DESNZ's published totals, GWP blends against DESNZ's refrigerant values, the market-based hierarchy, unit conversion, Monte Carlo behaviour, abatement costs, Excel round trips and cell-level errors, and an end-to-end run.
+62 tests cover:
+
+- the arithmetic, against hand-checked values
+- reconciliation with DESNZ's published totals, including the refrigerant blend GWPs
+- the market-based hierarchy and unit conversion
+- Monte Carlo behaviour and abatement costs
+- Excel round trips and cell-level errors
+- the app's grid conversion and plausibility checks
+- an end-to-end run and a smoke test of the app
 
 ## Recommendations section
 
@@ -149,7 +178,9 @@ config.yaml               organisation, boundary, sources, market instruments, p
 factors/                  versioned factor libraries with citations
 data/activity_input.xlsx  representative input (rebuild with scripts/build_representative_data.py)
 templates/                blank input template
-ghg_inventory/            models, factors, gwp, calc, uncertainty, scenarios, excel_io, outputs, chart, report, cli
+ghg_inventory/            models, factors, gwp, calc, uncertainty, scenarios, excel_io, outputs, chart, report, cli, ui_state
+app.py                    Streamlit app (python -m streamlit run app.py)
+.streamlit/config.toml    app theme
 tests/
 ```
 
