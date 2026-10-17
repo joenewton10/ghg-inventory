@@ -1,0 +1,18 @@
+# Umweltbundesamt (German Environment Agency): CO2 emissions per kWh of electricity consumed in Germany.
+library_id: uba_2025
+title: "Umweltbundesamt: CO2-Emissionen pro Kilowattstunde Strom 2025"
+publisher: Umweltbundesamt (UBA)
+year: 2025
+version: "published 2026-03-23"
+url: https://www.umweltbundesamt.de/themen/co2-emissionen-pro-kilowattstunde-strom-2025-nur
+gwp_basis: AR5
+factors:
+  grid_de:
+    description: German electricity consumption mix, location-based
+    unit: kWh
+    co2e_by_gas: {CO2: 0.344}
+    published_total_co2e: 0.344
+    energy_kwh_per_unit: 1.0
+    uncertainty_pct: 5
+    reference: "UBA, 344 g CO2/kWh for 2025 (estimate; 2024: 353 g, 2023: 379 g)"
+    notes: "CO2 only, direct emissions from generation, no upstream chain. The 2025 value is a UBA estimate and may be revised."

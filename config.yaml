@@ -1,0 +1,141 @@
+# GHG inventory configuration: Scope 1 and 2, GHG Protocol Corporate Standard.
+# Activity data lives in the Excel input file (input:), not here. Emission factors live in factors/.
+
+organisation:
+  name: "HTWest (representative data)"
+  site: "Bonn, Germany"
+  activity: "Contract precision cutting and converting of filter media"
+
+reporting:
+  year: 2025
+  base_year: 2025
+  recalculation_threshold_pct: 5
+  consolidation_approach: operational control
+  data_status: representative        # representative | actual
+  gwp_set: AR6                       # AR6 (IPCC 2021, current GHG Protocol / ESRS practice) or AR5 (matches DEFRA's published CO2e)
+
+factor_libraries:
+  - factors/defra_2025.yaml
+  - factors/uba_2025.yaml
+  - factors/aib_2025.yaml
+
+input: data/activity_input.xlsx
+
+# Emission source register. Every row in the Activity sheet must name one of these ids.
+sources:
+  - id: heating_gas
+    name: Natural gas boiler, space heating
+    role: heating
+    scope: 1
+    category: stationary_combustion
+    factor: defra_2025.natural_gas_gcv
+    unit_conversions:
+      # Only needed if the gas bill gives m3: kWh = m3 x Zustandszahl x Brennwert (both printed on the bill).
+      m3: {multiplier: 10.66, note: "Zustandszahl 0.9520 x Brennwert 11.2 kWh/m3, typical values, replace with bill figures"}
+  - id: vehicle_diesel
+    name: Company vans, diesel
+    role: vehicles
+    scope: 1
+    category: mobile_combustion
+    factor: defra_2025.diesel_avg_biofuel_blend
+  - id: forklift_lpg
+    name: Forklift, LPG
+    role: forklifts
+    scope: 1
+    category: mobile_combustion
+    factor: defra_2025.lpg
+  - id: grid_electricity
+    name: Purchased grid electricity
+    role: electricity
+    scope: 2
+    category: purchased_electricity
+    location_factor: uba_2025.grid_de
+    market:
+      # GHG Protocol Scope 2 Guidance hierarchy: cancelled guarantees of origin first, then the
+      # supplier's own factor (Stromkennzeichnung, §42 EnWG), then the residual mix.
+      eac_covered_share: 0.0
+      uncovered_basis: residual_mix     # residual_mix | supplier_specific
+      residual_mix_factor: aib_2025.residual_mix_de
+      supplier_specific: null           # e.g. {kg_co2_per_kwh: 0.31, renewable_share: 0.55, source: "Stromkennzeichnung 2025, <supplier>"}
+
+# Fugitive emissions come from the Refrigerants sheet; GWPs come from the gwp_set above.
+refrigerants:
+  category: fugitive
+
+# Indicative only. Not part of the inventory boundary.
+scope3_screening:
+  - id: cat1_filter_media
+    name: "Category 1: incoming filter media"
+    metric: material_purchased_t
+    factor: defra_2025.paper_primary
+
+carbon_price:
+  scheme: "BEHG (German national emissions trading for heating and transport fuels)"
+  year: 2025
+  eur_per_t_co2: 55
+  covered_categories: [stationary_combustion, mobile_combustion]
+
+# Representative prices, per unit of each source's activity unit.
+energy_prices_eur:
+  heating_gas: 0.09
+  vehicle_diesel: 1.65
+  forklift_lpg: 0.95
+  grid_electricity: 0.24
+
+discount_rate: 0.06
+
+# Options for the recommendations section. Savings are calculated, not typed in.
+# They overlap (heat recovery and a heat pump both cut gas), so they do not add up.
+abatement:
+  - type: compressed_air_leaks
+    name: Find and fix compressed-air leaks
+    compressed_air_share_of_electricity: 0.25
+    leak_reduction_share: 0.30
+    capex_eur: 3000
+    lifetime_years: 3
+  - type: compressor_heat_recovery
+    name: Recover compressor heat for space heating
+    compressor_share_of_electricity: 0.25
+    recoverable_heat_share: 0.70
+    heating_season_utilisation: 0.50
+    boiler_efficiency: 0.90
+    capex_eur: 9000
+    lifetime_years: 15
+  - type: led_lighting
+    name: Switch remaining lighting to LED with controls
+    lighting_share_of_electricity: 0.08
+    saving_share: 0.50
+    capex_eur: 12000
+    lifetime_years: 15
+  - type: rooftop_pv
+    name: Rooftop solar for own use
+    kwp: 100
+    yield_kwh_per_kwp: 900
+    self_consumption_share: 0.80
+    capex_eur: 90000
+    annual_opex_eur: 1200
+    lifetime_years: 25
+  - type: heat_pump
+    name: Replace the gas boiler with a heat pump
+    gas_replaced_share: 1.0
+    boiler_efficiency: 0.90
+    seasonal_cop: 3.0
+    capex_eur: 70000
+    lifetime_years: 20
+  - type: ev_fleet
+    name: Replace diesel vans with electric vans
+    diesel_replaced_share: 1.0
+    litres_per_100km: 8.0
+    kwh_per_100km: 22.0
+    capex_eur: 20000
+    lifetime_years: 8
+  - type: green_tariff
+    name: Buy electricity with cancelled guarantees of origin
+    eac_covered_share: 1.0
+    premium_eur_per_kwh: 0.01
+
+monte_carlo:
+  draws: 10000
+  seed: 42
+
+output_dir: output

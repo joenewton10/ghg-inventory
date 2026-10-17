@@ -1,0 +1,51 @@
+# UK Government GHG Conversion Factors for Company Reporting 2025, version 1.
+# Values copied from the flat-format file (ghg-conversion-factors-2025-flat-format.xlsx).
+# DEFRA publishes per-gas values already expressed as kg CO2e using IPCC AR5 100-year GWPs,
+# so gwp_basis tells the tool how to turn them back into kg of each gas.
+library_id: defra_2025
+title: UK Government GHG Conversion Factors for Company Reporting 2025
+publisher: Department for Energy Security and Net Zero (DESNZ)
+year: 2025
+version: "1"
+url: https://www.gov.uk/government/publications/greenhouse-gas-reporting-conversion-factors-2025
+gwp_basis: AR5
+factors:
+  natural_gas_gcv:
+    description: Natural gas, gross calorific value basis
+    unit: kWh
+    co2e_by_gas: {CO2: 0.18259, CH4: 0.00028, N2O: 0.00009}
+    published_total_co2e: 0.18296
+    energy_kwh_per_unit: 1.0
+    renewable_energy_share: 0.0
+    uncertainty_pct: 3
+    reference: "Fuels > Gaseous fuels > Natural gas, kWh (Gross CV), ID 1_100_1004_6"
+    notes: "UK grid gas blend includes a small biomethane share. German bills are in kWh Hs (gross CV), which matches this basis."
+  diesel_avg_biofuel_blend:
+    description: Diesel, average biofuel blend
+    unit: litre
+    co2e_by_gas: {CO2: 2.53763, CH4: 0.00029, N2O: 0.0329}
+    published_total_co2e: 2.57082
+    biogenic_co2_kg_per_unit: 0.14
+    energy_kwh_per_unit: 10.531
+    renewable_energy_share: 0.05
+    uncertainty_pct: 3
+    reference: "Fuels > Liquid fuels > Diesel (average biofuel blend), litres, ID 1_101_1011_8; biogenic CO2 from Outside of scopes ID 99_604_1011_8"
+    notes: "Energy content is gross CV, derived as 2.57082 kg/litre divided by 0.24411 kg/kWh (Gross CV). Renewable share approximated from the biogenic CO2 fraction. UK blend; German B7 is similar."
+  lpg:
+    description: Liquefied petroleum gas
+    unit: litre
+    co2e_by_gas: {CO2: 1.55491, CH4: 0.00136, N2O: 0.00086}
+    published_total_co2e: 1.55713
+    energy_kwh_per_unit: 7.259
+    renewable_energy_share: 0.0
+    uncertainty_pct: 3
+    reference: "Fuels > Gaseous fuels > LPG, litres, ID 1_100_1003_8"
+    notes: "Energy content is gross CV, derived as 1.55713 kg/litre divided by 0.2145 kg/kWh (Gross CV)."
+  paper_primary:
+    description: "Paper and board: paper, primary material production"
+    unit: tonne
+    co2e_by_gas: {CO2e: 1345.0779}
+    published_total_co2e: 1345.0779
+    uncertainty_pct: 50
+    reference: "Material use > Paper > Paper and board: paper, Primary material production, tonnes, ID 19_506_5164_15"
+    notes: "Used only as a proxy for Scope 3 screening of incoming filter media. Specialty filter media (glass fibre, synthetic, impregnated cellulose) can differ a lot."

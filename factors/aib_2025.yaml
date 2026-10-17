@@ -1,0 +1,19 @@
+# Association of Issuing Bodies (AIB): European Residual Mixes 2025.
+library_id: aib_2025
+title: "AIB European Residual Mixes 2025, final results"
+publisher: Association of Issuing Bodies (AIB)
+year: 2025
+version: "final results 2026-05-26"
+url: https://www.aib-net.org/facts/european-residual-mix/2025
+gwp_basis: AR5
+factors:
+  residual_mix_de:
+    description: German residual mix (electricity not covered by cancelled guarantees of origin)
+    unit: kWh
+    co2e_by_gas: {CO2: 0.70147}
+    published_total_co2e: 0.70147
+    energy_kwh_per_unit: 1.0
+    renewable_energy_share: 0.016
+    uncertainty_pct: 5
+    reference: "AIB Residual Mixes 2025, Table 2, Germany: 701.47 g CO2/kWh, 1.60% renewable"
+    notes: "CO2 only, direct emissions. AIB notes the official German residual mix is the one published by the national authority (UBA, Herkunftsnachweisregister); check it if it differs."
