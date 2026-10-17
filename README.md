@@ -1,18 +1,16 @@
-# GHG inventory, Scope 1 and 2: precision cutting site
+# GHG inventory, Scope 1 and 2: Precision Cutting Site
 
 [![Open the live app](https://static.streamlit.io/badges/streamlit_badge_black_white.svg)](https://ghg-inventory-io.streamlit.app/)
 
 **Live demo: [ghg-inventory-io.streamlit.app](https://ghg-inventory-io.streamlit.app/)**. It runs on representative data. You can edit anything and download the results, and nothing is saved. If it has been idle, it takes about a minute to wake up.
 
-A Python tool that builds a greenhouse gas inventory for a contract precision cutter, following the GHG Protocol Corporate Standard. It reads activity data from an Excel workbook and emission factors from versioned, cited factor files. It produces a line-item CSV, an Excel workpaper for an auditor, tables ready for Power BI, and a PDF report someone can actually read.
+A Python tool that builds a greenhouse gas inventory for a contract precision cutter company, following the GHG Protocol Corporate Standard. It reads activity data from an Excel workbook and emission factors from versioned, cited factor files. It produces a line-item CSV, an Excel workpaper for an auditor, tables ready for Power BI, and a PDF report someone can actually read.
 
-The operation it is modelled on is HTWest, a contract cutter of filter media in Bonn.
+The operation it is modelled on is HTWest GmbH, a contract cutter of filter media in Bonn.
 
 ## Read this first: the data is representative
 
-This version runs on realistic figures for a site of this type, not on HTWest's meter readings or invoices. The method, factors and code are the real thing. The activity numbers are placeholders. When real bills are available, they go into the input workbook and the inventory becomes a real-company inventory with no code changes.
-
-I took the same approach in the EUDR screening project: build the method properly, say plainly what the inputs are, and make the swap to real data trivial.
+This version runs on realistic figures for a site of this type, not on actual meter readings or invoices. The method, factors and code are the real thing. The activity numbers are placeholders. When real bills are available, they go into the input workbook and the inventory becomes a real-company inventory with no code changes.
 
 ## Results on the representative data (2025)
 
@@ -28,6 +26,7 @@ The full report is in [docs/sample_report.pdf](docs/sample_report.pdf). Its firs
 | **Total, location-based** | **109.3** |
 | **Total, market-based** | **180.8** |
 
+with this representative data:
 Electricity is 63% of the location-based total. That is the expected shape for a cutting operation: compressors, extraction and the cutting lines all run on power.
 
 Market-based Scope 2 is about twice the location-based figure. In Germany most renewable power is claimed through guarantees of origin, so electricity bought on a standard tariff is counted at the residual mix (701 g/kWh in 2025), well above the grid average (344 g/kWh). Customers who ask suppliers for market-based figures will see the bigger number. The report shows both and spells out what it would take to close the gap.
@@ -181,9 +180,6 @@ The fuel factors are UK averages. German fuels are close but not identical, and 
 
 Refrigerant leak rates are defaults wherever there are no service records, and the abatement costs are indicative.
 
-## Confidentiality
-
-Real HTWest figures do not go into a public repository without the company's permission. If permission is not given, the fallback is to publish only intensity figures (per tonne processed, per employee, per square metre), which the tool already calculates, or an indexed version.
 
 ## Layout
 
